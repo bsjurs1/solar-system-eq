@@ -52,7 +52,7 @@ const planetTextures = [
   "./2k_neptune.jpg",
 ];
 
-const planetDistances = [3.9, 7.2, 10, 15.2, 52, 95.8, 192.2, 300.5]; // in our scaled units
+const planetDistances = [5.0, 15.0, 25.0, 30.0, 52, 95.8, 192.2, 300.5]; // in our scaled units
 const trailLength = 1000; // number of segments
 const trails = [];
 
@@ -186,7 +186,7 @@ let audioContext, analyser, source, data;
 let minusOrAdd = true;
 
 let lastVolume = 0;
-const BEAT_THRESHOLD = 40; // Adjust this value based on your specific track and desired sensitivity
+const BEAT_THRESHOLD = 45; // Adjust this value based on your specific track and desired sensitivity
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
 let lastBeatTime = 0;
 
@@ -244,17 +244,30 @@ function animate() {
     const trail = trails[index];
     const positions = trail.geometry.attributes.position.array;
 
-    // Shift positions
+    const forwardDirection = new THREE.Vector3(
+      -Math.sin(Date.now() * speed),
+      0,
+      -Math.cos(Date.now() * speed)
+    );
+
+    const sideDirection = new THREE.Vector3().crossVectors(
+      forwardDirection,
+      new THREE.Vector3(0, 1, 0)
+    );
+
+    // Shift positions and apply audio data for displacement
     for (let i = positions.length - 3; i > 0; i -= 3) {
       positions[i] = positions[i - 3];
       positions[i + 1] = positions[i - 2];
       positions[i + 2] = positions[i - 1];
     }
 
-    // New position
-    positions[0] = planet.position.x;
-    positions[1] = planet.position.y;
-    positions[2] = planet.position.z;
+    // Displace the starting point of the trail based on the audio data
+    const displacement = (data[index % data.length] - 128) * 0.1; // The factor of 0.01 is arbitrary; adjust for more/less displacement
+
+    positions[0] = planet.position.x + sideDirection.x * displacement;
+    positions[1] = planet.position.y + sideDirection.y * displacement;
+    positions[2] = planet.position.z + sideDirection.z * displacement;
 
     trail.geometry.attributes.position.needsUpdate = true;
   });
@@ -268,7 +281,7 @@ if (!audioContext) {
   analyser = audioContext.createAnalyser();
 }
 
-fetch("./bicep.mov")
+fetch("./tiesto.mov")
   .then((response) => response.arrayBuffer())
   .then((data) => audioContext.decodeAudioData(data))
   .then((audioBuffer) => {
