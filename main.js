@@ -53,6 +53,19 @@ const planetTextures = [
 ];
 
 const planetDistances = [3.9, 7.2, 10, 15.2, 52, 95.8, 192.2, 300.5]; // in our scaled units
+const trailLength = 1000; // number of segments
+const trails = [];
+
+const planetColors = [
+  0x909090, // Mercury: Grayish color
+  0xdaa520, // Venus: Golden color
+  0x1e90ff, // Earth: Blue color
+  0xb22222, // Mars: Reddish color
+  0xffd700, // Jupiter: Orangey color
+  0xf4a460, // Saturn: Sandy brown color
+  0x87cefa, // Uranus: Light blue color
+  0x4682b4, // Neptune: Steel blue color
+];
 
 planetTextures.forEach((textureURL, index) => {
   const texture = new THREE.TextureLoader().load(textureURL);
@@ -62,6 +75,66 @@ planetTextures.forEach((textureURL, index) => {
   planetMesh.position.x = planetDistances[index]; // Use the adjusted distances
   planets.push(planetMesh);
   scene.add(planetMesh);
+  const trailGeometry = new THREE.BufferGeometry();
+  const positions = [];
+  const sizes = [];
+  const planet = planets[index];
+  const alphas = [];
+  const initialSize = index + 1;
+  for (let i = 0; i < trailLength; i++) {
+    positions.push(planet.position.x, planet.position.y, planet.position.z);
+    sizes.push(2.0 - (i / trailLength) * 1.5);
+    alphas.push(1.0 - i / trailLength); // This will interpolate the alpha from 1 to 0 along the trail
+  }
+
+  trailGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(positions, 3)
+  );
+  trailGeometry.setAttribute(
+    "size",
+    new THREE.Float32BufferAttribute(sizes, 1)
+  );
+  trailGeometry.setAttribute(
+    "alpha", // Set the alpha attribute for the trail geometry
+    new THREE.Float32BufferAttribute(alphas, 1)
+  );
+
+  const trailMaterial = new THREE.ShaderMaterial({
+    uniforms: {
+      color: { value: new THREE.Color(planetColors[index]) },
+    },
+    depthTest: true,
+    depthWrite: true,
+    vertexShader: `
+      attribute float size;
+      attribute float alpha; // Declare alpha attribute
+      uniform vec3 color;  
+      varying vec3 vColor;
+      varying float vAlpha; // Declare a varying for alpha
+      void main() {
+          vColor = color; 
+          vAlpha = alpha; // Assign alpha attribute to the varying
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      varying vec3 vColor;
+      varying float vAlpha; // Use the varying for alpha
+      void main() {
+        float distanceToCenter = length(gl_PointCoord - vec2(0.5, 0.5));
+        float alpha = vAlpha - smoothstep(0.2, 0.3, distanceToCenter);  // Adjust these values to modify fade-out
+        gl_FragColor = vec4(vColor, alpha);
+      }
+    `,
+    transparent: true,
+  });
+
+  const trail = new THREE.Points(trailGeometry, trailMaterial);
+  trails.push(trail);
+  scene.add(trail);
 });
 
 //Light
@@ -83,9 +156,9 @@ const camera = new THREE.PerspectiveCamera(
   45,
   sizes.width / sizes.height,
   0.1,
-  3000
+  2000
 );
-camera.position.z = 50;
+camera.position.z = 60;
 camera.position.y = 20;
 camera.lookAt(mesh.position);
 scene.add(camera);
@@ -117,7 +190,9 @@ const BEAT_THRESHOLD = 40; // Adjust this value based on your specific track and
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
 let lastBeatTime = 0;
 
-const orbitSpeeds = [0.002, 0.0018, 0.0015, 0.0012, 0.0007, 0.0005, 0.0003, 0.0002];
+const orbitSpeeds = [
+  0.002, 0.0018, 0.0015, 0.0012, 0.0007, 0.0005, 0.0003, 0.0002,
+];
 
 function animate() {
   requestAnimationFrame(animate);
@@ -142,7 +217,7 @@ function animate() {
     currentTime - lastBeatTime > MIN_TIME_BETWEEN_BEATS
   ) {
     if (minusOrAdd) {
-      sunMaterial.emissiveIntensity = 2.0; 
+      sunMaterial.emissiveIntensity = 2.0;
       starsMaterial.size = 1.1;
     } else {
       sunMaterial.emissiveIntensity = 0.9;
@@ -162,9 +237,26 @@ function animate() {
 
     const orbitRadius = planetDistances[index];
     const speed = orbitSpeeds[index] * 0.3;
-    
+
     planet.position.x = Math.sin(Date.now() * speed) * orbitRadius;
     planet.position.z = Math.cos(Date.now() * speed) * orbitRadius;
+
+    const trail = trails[index];
+    const positions = trail.geometry.attributes.position.array;
+
+    // Shift positions
+    for (let i = positions.length - 3; i > 0; i -= 3) {
+      positions[i] = positions[i - 3];
+      positions[i + 1] = positions[i - 2];
+      positions[i + 2] = positions[i - 1];
+    }
+
+    // New position
+    positions[0] = planet.position.x;
+    positions[1] = planet.position.y;
+    positions[2] = planet.position.z;
+
+    trail.geometry.attributes.position.needsUpdate = true;
   });
 
   composer.render();
