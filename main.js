@@ -54,7 +54,7 @@ const planetTextures = [
 ];
 
 const planetDistances = [5.0, 15.0, 25.0, 30.0, 52, 95.8, 192.2, 300.5]; // in our scaled units
-const trailLength = 1000; // number of segments
+const trailLength = 200; // number of segments
 const trails = [];
 
 const planetColors = [
@@ -159,7 +159,7 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   2000
 );
-camera.position.z = 60;
+camera.position.z = 80;
 camera.position.y = 10;
 camera.lookAt(mesh.position);
 scene.add(camera);
@@ -200,6 +200,11 @@ function animate() {
 
   data = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteTimeDomainData(data);
+  const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(frequencyData);
+
+  const frequencyIntensity = (frequencyData[5] / 256); // Normalize to 0-1 range
+  sunMaterial.emissiveIntensity = frequencyIntensity;
 
   starField.geometry.attributes.position.needsUpdate = true; // Inform three.js that the positions have been updated
   mesh.rotation.y += 0.005;
@@ -270,11 +275,11 @@ function animate() {
     }
 
     // Displace the starting point of the trail based on the audio data
-    const displacement = (data[index % data.length] - 128) * 0.02; // The factor of 0.01 is arbitrary; adjust for more/less displacement
+    const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
 
-    positions[0] = planet.position.x + sideDirection.x * displacement;
-    positions[1] = planet.position.y + sideDirection.y * displacement;
-    positions[2] = planet.position.z + sideDirection.z * displacement*10;
+    positions[0] = planet.position.x + sideDirection.x;
+    positions[1] = planet.position.y + sideDirection.y + displacement;
+    positions[2] = planet.position.z + sideDirection.z;
 
     trail.geometry.attributes.position.needsUpdate = true;
   });
