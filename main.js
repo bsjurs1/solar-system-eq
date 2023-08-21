@@ -3,6 +3,7 @@ import "./styles.css";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import * as gsap from "gsap";
 
 // Scene
 const scene = new THREE.Scene();
@@ -159,7 +160,7 @@ const camera = new THREE.PerspectiveCamera(
   2000
 );
 camera.position.z = 60;
-camera.position.y = 20;
+camera.position.y = 10;
 camera.lookAt(mesh.position);
 scene.add(camera);
 
@@ -186,7 +187,7 @@ let audioContext, analyser, source, data;
 let minusOrAdd = true;
 
 let lastVolume = 0;
-const BEAT_THRESHOLD = 45; // Adjust this value based on your specific track and desired sensitivity
+const BEAT_THRESHOLD = 40; // Adjust this value based on your specific track and desired sensitivity
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
 let lastBeatTime = 0;
 
@@ -216,13 +217,19 @@ function animate() {
     lastVolume <= BEAT_THRESHOLD &&
     currentTime - lastBeatTime > MIN_TIME_BETWEEN_BEATS
   ) {
-    if (minusOrAdd) {
-      sunMaterial.emissiveIntensity = 2.0;
-      starsMaterial.size = 1.1;
-    } else {
-      sunMaterial.emissiveIntensity = 0.9;
-      starsMaterial.size *= 0.95;
-    }
+    // Now using tweening to animate the scaling
+    planets.forEach((planet, index) => {
+      const targetScale = minusOrAdd ? 2.1 : 0.5; // You can adjust these values for more subtle scaling effects
+      gsap.to(planet.scale, {
+        x: targetScale,
+        y: targetScale,
+        z: targetScale,
+        delay: 0.1 * index, // This is the delay for the effect, you can adjust as needed
+        duration: 0.2, // This is how long the scale transition lasts
+        ease: "sine.out", // This easing makes the animation smooth
+      });
+    });
+
     minusOrAdd = !minusOrAdd;
     lastBeatTime = currentTime;
   }
@@ -263,11 +270,11 @@ function animate() {
     }
 
     // Displace the starting point of the trail based on the audio data
-    const displacement = (data[index % data.length] - 128) * 0.1; // The factor of 0.01 is arbitrary; adjust for more/less displacement
+    const displacement = (data[index % data.length] - 128) * 0.02; // The factor of 0.01 is arbitrary; adjust for more/less displacement
 
     positions[0] = planet.position.x + sideDirection.x * displacement;
     positions[1] = planet.position.y + sideDirection.y * displacement;
-    positions[2] = planet.position.z + sideDirection.z * displacement;
+    positions[2] = planet.position.z + sideDirection.z * displacement*10;
 
     trail.geometry.attributes.position.needsUpdate = true;
   });
