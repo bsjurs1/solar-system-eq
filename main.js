@@ -165,7 +165,7 @@ const makePlanets = () => {
 };
 
 const makeTrails = (planets) => {
-  const trailLength = 750;
+  const trailLength = 500;
   const trails = [];
 
   planets.forEach((planet, index) => {
@@ -175,7 +175,7 @@ const makeTrails = (planets) => {
     const alphas = [];
     for (let i = 0; i < trailLength; i++) {
       positions.push(planet.position.x, planet.position.y, planet.position.z);
-      sizes.push(3.0 - (i / trailLength) * 1.5);
+      sizes.push(((index+3.0)*0.7) - (i / trailLength) * 1.5);
       alphas.push(1.0 - i / trailLength); // This will interpolate the alpha from 1 to 0 along the trail
     }
 
@@ -272,9 +272,11 @@ const renderStarField = (starField) => {
   starField.geometry.attributes.position.needsUpdate = true;
 };
 
+let runningAvgs = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+let normalizedFrequencySubtractors = [0.6, 0.6, 0.5, 0.5, 0.4, 0.4, 0.1225, 0.11];
+
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
-    const normalizedPlanetFrequencyIntensity = frequencyData[index*50] / 256;
     const planet = planets[index];
     const positions = trail.geometry.attributes.position.array;
 
@@ -285,19 +287,15 @@ const renderTrails = (trails, planets, frequencyData) => {
       positions[i + 2] = positions[i - 1];
     }
 
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    // Displace the starting point of the trail based on the audio data
-    const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
-
+    const normalizedFrequency = frequencyData[index*50] / 256 - normalizedFrequencySubtractors[index];
+    runningAvgs[index] = (runningAvgs[index]+normalizedFrequency)/2.0;
+    const displacement = normalizedFrequency * index**2.3;
     positions[0] = planet.position.x;
-    positions[1] = planet.position.y +
-    normalizedPlanetFrequencyIntensity * 15*index/2.0 +
-    displacement;
-    positions[2] =
-      planet.position.z;
-
+    positions[1] = planet.position.y + displacement;
+    positions[2] = planet.position.z;
     trail.geometry.attributes.position.needsUpdate = true;
   });
+  console.log(runningAvgs);
 };
 
 const renderPlanets = (planets, frequencyData) => {
