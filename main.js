@@ -64,10 +64,10 @@ const makeCamera = () => {
     45,
     windowSize.width / windowSize.height,
     0.1,
-    1000
+    2000
   );
-  camera.position.z = 0;
-  camera.position.y = 300;
+  camera.position.z = 200;
+  camera.position.y = 100;
   camera.lookAt(sun.position);
   return camera;
 };
@@ -99,9 +99,7 @@ const makeCameraControls = (camera) => {
   camControls.noFly = true;
   camControls.lookVertical = true;
   camControls.constrainVertical = false;
-  camControls.verticalMin = 1.0;
   camControls.enabled = false;
-  camControls.verticalMax = 2.0;
   camControls.lon = -150;
   camControls.lat = 120;
   return camControls;
@@ -167,7 +165,7 @@ const makePlanets = () => {
 };
 
 const makeTrails = (planets) => {
-  const trailLength = 1000;
+  const trailLength = 750;
   const trails = [];
 
   planets.forEach((planet, index) => {
@@ -177,7 +175,7 @@ const makeTrails = (planets) => {
     const alphas = [];
     for (let i = 0; i < trailLength; i++) {
       positions.push(planet.position.x, planet.position.y, planet.position.z);
-      sizes.push(2.0 - (i / trailLength) * 1.5);
+      sizes.push(3.0 - (i / trailLength) * 1.5);
       alphas.push(1.0 - i / trailLength); // This will interpolate the alpha from 1 to 0 along the trail
     }
 
@@ -253,7 +251,7 @@ const renderSun = (sun, sunMaterial, frequencyIntensity) => {
       const signalScalingFactor = 0.001;
       const recomputedAxisScale =
         axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
-      const MAX_SUN_SCALE = 15;
+      const MAX_SUN_SCALE = 10.5;
       const MIN_SUN_SCALE = 0.3;
       const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
       return Math.max(MIN_SUN_SCALE, minValue);
@@ -276,7 +274,7 @@ const renderStarField = (starField) => {
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
-    const normalizedPlanetFrequencyIntensity = frequencyData[index] / 256;
+    const normalizedPlanetFrequencyIntensity = frequencyData[index*50] / 256;
     const planet = planets[index];
     const positions = trail.geometry.attributes.position.array;
 
@@ -291,23 +289,12 @@ const renderTrails = (trails, planets, frequencyData) => {
     // Displace the starting point of the trail based on the audio data
     const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
 
-    if (index % 2 === 0) {
-      positions[0] = planet.position.x;
-      positions[1] =
-        planet.position.y + normalizedPlanetFrequencyIntensity + displacement;
-      positions[2] =
-        planet.position.z +
-        normalizedPlanetFrequencyIntensity * 15 +
-        displacement;
-    } else {
-      positions[0] = planet.position.x;
-      positions[1] =
-        planet.position.y +
-        normalizedPlanetFrequencyIntensity * 3 +
-        displacement;
-      positions[2] =
-        planet.position.z + normalizedPlanetFrequencyIntensity + displacement;
-    }
+    positions[0] = planet.position.x;
+    positions[1] = planet.position.y +
+    normalizedPlanetFrequencyIntensity * 15*index/2.0 +
+    displacement;
+    positions[2] =
+      planet.position.z;
 
     trail.geometry.attributes.position.needsUpdate = true;
   });
