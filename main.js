@@ -4,6 +4,7 @@ import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import Chart from "chart.js/auto";
+import TWEEN from '@tweenjs/tween.js';
 
 const windowSize = {
   width: window.innerWidth,
@@ -503,6 +504,7 @@ const startAudioVisualization = (trackURL, audioContext) => {
     requestAnimationFrame(renderLoop);
     renderLoopContent();
     composer.render();
+    TWEEN.update();
   };
 
   playTrack(trackURL, audioContext);
@@ -511,8 +513,9 @@ const startAudioVisualization = (trackURL, audioContext) => {
 
 startAudioVisualization("./tameimpala.mov", audioContext);
 
+// Browser interaction
+
 window.addEventListener('resize', () => {
-  console.log("resize");
   windowSize.width = window.innerWidth;
   windowSize.height = window.innerHeight;
   
@@ -521,3 +524,70 @@ window.addEventListener('resize', () => {
   
   composer.renderer.setSize(windowSize.width, windowSize.height);
 });
+
+let amount = 0.05;
+const moveLeft = () => {
+  const startPosition = camera.position.clone();
+  const endPosition = startPosition.clone();
+  endPosition.x -= 1;
+  new TWEEN.Tween(startPosition)
+    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
+    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
+    .onUpdate(() => {
+      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
+    }).start();
+};
+
+const moveRight = () => {
+  const startPosition = camera.position.clone();
+  const endPosition = startPosition.clone();
+  endPosition.x += 1;
+  new TWEEN.Tween(startPosition)
+    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
+    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
+    .onUpdate(() => {
+      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
+    }).start();
+};
+
+const moveBackward = () => {
+  const startPosition = camera.position.clone();
+  const endPosition = startPosition.clone();
+  endPosition.z -= 1;
+  new TWEEN.Tween(startPosition)
+    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
+    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
+    .onUpdate(() => {
+      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
+    }).start();
+};
+
+const moveForward = () => {
+  const startPosition = camera.position.clone();
+  const endPosition = startPosition.clone();
+  endPosition.z += 1;
+  new TWEEN.Tween(startPosition)
+    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
+    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
+    .onUpdate(() => {
+      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
+    }).start();
+};
+
+document.addEventListener('keydown', (event) => {
+    switch (event.keyCode) {
+      case 37: // Left arrow key
+          moveLeft()
+          break;
+      case 39: // Right arrow key
+          moveRight();
+          break;
+      case 38: // Up arrow key
+          moveBackward()
+          break;
+      case 40: // Down arrow key
+          moveForward();
+          break;
+  }
+});
+
