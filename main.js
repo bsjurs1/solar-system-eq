@@ -164,7 +164,7 @@ const makePlanets = () => {
   return planets;
 };
 
-let trailsPointSizes = [5.0, 5.0, 5.0, 5.0, 10.0, 10.0, 9.0, 9.0];
+let trailsPointSizes = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0];
 const trailLengths = [200, 200, 200, 200, 300, 400, 500, 700];
 
 const makeTrails = (planets) => {
@@ -287,6 +287,7 @@ const renderStarField = (starField) => {
 };
 
 let normalizedFrequencySubtractors = [0.6, 0.6, 0.5, 0.5, 0.4, 0.4, 0.1225, 0.11];
+const trailPointDisplacementFactors = [20,30,40,40,50,100,70,60];
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
@@ -300,8 +301,8 @@ const renderTrails = (trails, planets, frequencyData) => {
       positions[i + 2] = positions[i - 1];
     }
 
-    const normalizedFrequency = frequencyData[index*50] / 256 - normalizedFrequencySubtractors[index];
-    const displacement = normalizedFrequency * index**2.3;
+    const normalizedFrequency = frequencyData[(index+2)*50] / 256 - normalizedFrequencySubtractors[index];
+    const displacement = normalizedFrequency * trailPointDisplacementFactors[index];
     trailsPointSizes[index] = (normalizedFrequency*2);
     positions[0] = planet.position.x;
     positions[1] = planet.position.y + displacement;
@@ -531,7 +532,7 @@ const startAudioVisualization = (trackURL, audioContext) => {
   renderLoop();
 };
 
-startAudioVisualization("./wolfmother.mp3", audioContext);
+startAudioVisualization("./tiesto.mov", audioContext);
 
 // Browser interaction
 
