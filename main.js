@@ -40,11 +40,14 @@ const trailColors = [
   0x4682b4, // Neptune: Steel blue color
 ];
 
-const planetDistances = [5.0, 15.0, 25.0, 30.0, 40, 50, 60, 70]; // in our scaled units
+const planetDistances = [20.0, 25.0, 30, 35.4, 80.0, 120.0, 140.0, 200.0]; // in our scaled units
+const planetSizes = [1, 1, 1, 1, 4, 3, 3, 2]; // in our scaled units
 
 const orbitSpeeds = [
   0.002, 0.0018, 0.0015, 0.0012, 0.0007, 0.0005, 0.0003, 0.0002,
 ];
+
+const clock = new THREE.Clock();
 
 // Scene setup functions
 
@@ -63,8 +66,8 @@ const makeCamera = () => {
     0.1,
     1000
   );
-  camera.position.z = 80;
-  camera.position.y = 20;
+  camera.position.z = 0;
+  camera.position.y = 300;
   camera.lookAt(sun.position);
   return camera;
 };
@@ -89,11 +92,26 @@ const makeComposer = (scene, camera, windowSize) => {
   return composer;
 };
 
+const makeCameraControls = (camera) => {
+  const camControls = new FirstPersonControls(camera);
+  camControls.lookSpeed = 0.1;
+  camControls.movementSpeed = 20;
+  camControls.noFly = true;
+  camControls.lookVertical = true;
+  camControls.constrainVertical = false;
+  camControls.verticalMin = 1.0;
+  camControls.enabled = false;
+  camControls.verticalMax = 2.0;
+  camControls.lon = -150;
+  camControls.lat = 120;
+  return camControls;
+};
+
 // -- Scene generic setup
 
 const makeSun = () => {
   const texture = new THREE.TextureLoader().load("./2k_sun.jpg");
-  const sunGeometry = new THREE.SphereGeometry(3, 64, 64); // Adjust the size as needed
+  const sunGeometry = new THREE.SphereGeometry(10, 64, 64); // Adjust the size as needed
   const sunMaterial = new THREE.MeshStandardMaterial({ map: texture });
   sunMaterial.emissive = new THREE.Color(0xffff00); // Yellowish glow, adjust as needed
   sunMaterial.emissiveIntensity = 2.0; // Intensity, adjust as needed
@@ -138,7 +156,7 @@ const makePlanets = () => {
 
   planetTextures.forEach((textureURL, index) => {
     const texture = new THREE.TextureLoader().load(textureURL);
-    const planetGeometry = new THREE.SphereGeometry(1, 64, 64); // Adjust the size as needed
+    const planetGeometry = new THREE.SphereGeometry(planetSizes[index], 64, 64); // Adjust the size as needed
     const planetMaterial = new THREE.MeshStandardMaterial({ map: texture });
     const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
     planetMesh.position.x = planetDistances[index]; // Use the adjusted distances
@@ -149,7 +167,7 @@ const makePlanets = () => {
 };
 
 const makeTrails = (planets) => {
-  const trailLength = 500;
+  const trailLength = 1000;
   const trails = [];
 
   planets.forEach((planet, index) => {
@@ -235,7 +253,7 @@ const renderSun = (sun, sunMaterial, frequencyIntensity) => {
       const signalScalingFactor = 0.001;
       const recomputedAxisScale =
         axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
-      const MAX_SUN_SCALE = 2;
+      const MAX_SUN_SCALE = 15;
       const MIN_SUN_SCALE = 0.3;
       const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
       return Math.max(MIN_SUN_SCALE, minValue);
@@ -343,8 +361,8 @@ const renderPlanets = (planets, frequencyData) => {
     rotatePlanet(planet);
     translatePlanet(planet, index);
     const normalizedPlanetFrequencyIntensity = frequencyData[index * 200] / 256;
-    recomputeOrbitSpeed(index, normalizedPlanetFrequencyIntensity);
-    scalePlanet(planet, normalizedPlanetFrequencyIntensity, index);
+    //recomputeOrbitSpeed(index, normalizedPlanetFrequencyIntensity);
+    //scalePlanet(planet, normalizedPlanetFrequencyIntensity, index);
   });
 };
 
@@ -486,21 +504,7 @@ trails.forEach((trail) => {
   scene.add(trail);
 });
 
-const camControls = new FirstPersonControls(camera);
-camControls.lookSpeed = 0.1;
-camControls.movementSpeed = 20;
-camControls.noFly = true;
-camControls.lookVertical = true;
-camControls.constrainVertical = false;
-camControls.verticalMin = 1.0;
-camControls.enabled = false;
-camControls.verticalMax = 2.0;
-camControls.lon = -150;
-camControls.lat = 120;
-
-
-let isLooking = false;
-var clock = new THREE.Clock();
+const camControls = makeCameraControls(camera);
 
 const startAudioVisualization = (trackURL, audioContext) => {
   const renderLoop = () => {
@@ -516,15 +520,14 @@ const startAudioVisualization = (trackURL, audioContext) => {
       renderPlanets(planets, frequencyBinDataArray, normalizedFrequencyIntensity);
       renderTrails(trails, planets, frequencyBinDataArray);
       updateCharts();
+      const delta = clock.getDelta()
+      camControls.update(delta);
     };
 
     requestAnimationFrame(renderLoop);
     renderLoopContent();
     composer.render();
     TWEEN.update();
-
-    const delta = clock.getDelta()
-    camControls.update(delta);
   };
 
   playTrack(trackURL, audioContext);
@@ -547,4 +550,4 @@ window.addEventListener('resize', () => {
 
 document.addEventListener('click', () => {
   camControls.enabled = !camControls.enabled;
-});ss
+});
