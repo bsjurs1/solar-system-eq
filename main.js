@@ -164,18 +164,21 @@ const makePlanets = () => {
   return planets;
 };
 
+let trailsPointSizes = [5.0, 5.0, 5.0, 5.0, 10.0, 10.0, 9.0, 9.0];
+const trailLengths = [200, 200, 200, 200, 300, 400, 500, 700];
+
 const makeTrails = (planets) => {
-  const trailLength = 500;
   const trails = [];
 
   planets.forEach((planet, index) => {
+    const trailLength = trailLengths[index];
     const trailGeometry = new THREE.BufferGeometry();
     const positions = [];
     const sizes = [];
     const alphas = [];
     for (let i = 0; i < trailLength; i++) {
       positions.push(planet.position.x, planet.position.y, planet.position.z);
-      sizes.push(((index+3.0)*0.7) - (i / trailLength) * 1.5);
+      sizes.push(trailsPointSizes[index]);
       alphas.push(1.0 - i / trailLength); // This will interpolate the alpha from 1 to 0 along the trail
     }
 
@@ -272,8 +275,13 @@ const renderStarField = (starField) => {
   starField.geometry.attributes.position.needsUpdate = true;
 };
 
-let runningAvgs = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
 let normalizedFrequencySubtractors = [0.6, 0.6, 0.5, 0.5, 0.4, 0.4, 0.1225, 0.11];
+
+const getStandardDeviation = (array) => {
+  const n = array.length
+  const mean = array.reduce((a, b) => a + b) / n
+  return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n)
+}
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
@@ -288,14 +296,13 @@ const renderTrails = (trails, planets, frequencyData) => {
     }
 
     const normalizedFrequency = frequencyData[index*50] / 256 - normalizedFrequencySubtractors[index];
-    runningAvgs[index] = (runningAvgs[index]+normalizedFrequency)/2.0;
     const displacement = normalizedFrequency * index**2.3;
+    trailsPointSizes[index] = (normalizedFrequency*2);
     positions[0] = planet.position.x;
     positions[1] = planet.position.y + displacement;
     positions[2] = planet.position.z;
     trail.geometry.attributes.position.needsUpdate = true;
   });
-  console.log(runningAvgs);
 };
 
 const renderPlanets = (planets, frequencyData) => {
@@ -519,7 +526,7 @@ const startAudioVisualization = (trackURL, audioContext) => {
   renderLoop();
 };
 
-startAudioVisualization("./tameimpala.mov", audioContext);
+startAudioVisualization("./wolfmother.mp3", audioContext);
 
 // Browser interaction
 
