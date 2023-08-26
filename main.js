@@ -40,37 +40,9 @@ const orbitSpeeds = [
   0.002, 0.0018, 0.0015, 0.0012, 0.0007, 0.0005, 0.0003, 0.0002,
 ];
 
-const makeSun = () => {
-  const texture = new THREE.TextureLoader().load("./2k_sun.jpg");
-  const sunGeometry = new THREE.SphereGeometry(3, 64, 64); // Adjust the size as needed
-  const sunMaterial = new THREE.MeshStandardMaterial({ map: texture });
-  sunMaterial.emissive = new THREE.Color(0xffff00); // Yellowish glow, adjust as needed
-  sunMaterial.emissiveIntensity = 2.0; // Intensity, adjust as needed
-  const sun = new THREE.Mesh(sunGeometry, sunMaterial);
-  return [sun, sunMaterial];
-};
+// Scene setup functions
 
-const makeStarField = () => {
-  const starsGeometry = new THREE.BufferGeometry();
-  const starsVertices = [];
-  const numStars = 10000;
-  for (let i = 0; i < numStars; i++) {
-    const x = (Math.random() - 0.5) * 2000; // Spread them out over a wide area
-    const y = (Math.random() - 0.5) * 2000;
-    const z = (Math.random() - 0.5) * 2000;
-    starsVertices.push(x, y, z);
-  }
-  starsGeometry.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(starsVertices, 3)
-  );
-  const starsMaterial = new THREE.PointsMaterial({
-    color: 0xffffff,
-    size: 0.1,
-  });
-  const starField = new THREE.Points(starsGeometry, starsMaterial);
-  return starField;
-};
+// -- Scene generic setup
 
 const makePointLight = () => {
   const pointLight = new THREE.PointLight(0xffffff, 1, 500);
@@ -109,6 +81,40 @@ const makeComposer = (scene, camera, windowSize) => {
   bloomPass.radius = 1; // Controls the glow size
   composer.addPass(bloomPass);
   return composer;
+};
+
+// -- Scene object setup
+
+const makeSun = () => {
+  const texture = new THREE.TextureLoader().load("./2k_sun.jpg");
+  const sunGeometry = new THREE.SphereGeometry(3, 64, 64); // Adjust the size as needed
+  const sunMaterial = new THREE.MeshStandardMaterial({ map: texture });
+  sunMaterial.emissive = new THREE.Color(0xffff00); // Yellowish glow, adjust as needed
+  sunMaterial.emissiveIntensity = 2.0; // Intensity, adjust as needed
+  const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+  return [sun, sunMaterial];
+};
+
+const makeStarField = () => {
+  const starsGeometry = new THREE.BufferGeometry();
+  const starsVertices = [];
+  const numStars = 10000;
+  for (let i = 0; i < numStars; i++) {
+    const x = (Math.random() - 0.5) * 2000; // Spread them out over a wide area
+    const y = (Math.random() - 0.5) * 2000;
+    const z = (Math.random() - 0.5) * 2000;
+    starsVertices.push(x, y, z);
+  }
+  starsGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(starsVertices, 3)
+  );
+  const starsMaterial = new THREE.PointsMaterial({
+    color: 0xffffff,
+    size: 0.1,
+  });
+  const starField = new THREE.Points(starsGeometry, starsMaterial);
+  return starField;
 };
 
 const makePlanets = () => {
@@ -203,35 +209,38 @@ const makeTrails = (planets) => {
   return trails;
 };
 
-const updateSunEmissive = (sunMaterial, frequencyIntensity) => {
-  sunMaterial.emissiveIntensity = frequencyIntensity;
-};
-
-const computeSunScaleAtAxis = (axisScale, frequencyIntensity) => {
-  const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
-  const signalScalingFactor = 0.001;
-  const recomputedAxisScale =
-    axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
-  const MAX_SUN_SCALE = 2;
-  const MIN_SUN_SCALE = 0.3;
-  const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
-  return Math.max(MIN_SUN_SCALE, minValue);
-};
-
-const scaleSun = (sun, frequencyIntensity) => {
-  sun.scale.x = computeSunScaleAtAxis(sun.scale.x, frequencyIntensity);
-  sun.scale.y = computeSunScaleAtAxis(sun.scale.y, frequencyIntensity);
-  sun.scale.z = computeSunScaleAtAxis(sun.scale.z, frequencyIntensity);
-};
-
-const updateSunColor = (sunMaterial, frequencyIntensity) => {
-  const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
-  const signalScalingFactor = 0.001;
-  sunMaterial.emissive.r +=
-    origoCenteredFrequencyIntensity * signalScalingFactor;
-};
+// Render functions
 
 const renderSun = (sun, sunMaterial, frequencyIntensity) => {
+
+  const updateSunColor = (sunMaterial, frequencyIntensity) => {
+    const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
+    const signalScalingFactor = 0.001;
+    sunMaterial.emissive.r +=
+      origoCenteredFrequencyIntensity * signalScalingFactor;
+  };
+
+  const updateSunEmissive = (sunMaterial, frequencyIntensity) => {
+    sunMaterial.emissiveIntensity = frequencyIntensity;
+  };
+  
+  const scaleSun = (sun, frequencyIntensity) => {
+    const computeSunScaleAtAxis = (axisScale, frequencyIntensity) => {
+      const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
+      const signalScalingFactor = 0.001;
+      const recomputedAxisScale =
+        axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
+      const MAX_SUN_SCALE = 2;
+      const MIN_SUN_SCALE = 0.3;
+      const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
+      return Math.max(MIN_SUN_SCALE, minValue);
+    };
+
+    sun.scale.x = computeSunScaleAtAxis(sun.scale.x, frequencyIntensity);
+    sun.scale.y = computeSunScaleAtAxis(sun.scale.y, frequencyIntensity);
+    sun.scale.z = computeSunScaleAtAxis(sun.scale.z, frequencyIntensity);
+  };
+
   updateSunColor(sunMaterial, frequencyIntensity);
   updateSunEmissive(sunMaterial, frequencyIntensity);
   scaleSun(sun, frequencyIntensity);
