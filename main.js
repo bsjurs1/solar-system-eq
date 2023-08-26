@@ -3,6 +3,7 @@ import "./styles.css";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import Chart from "chart.js/auto";
 
 const windowSize = {
   width: window.innerWidth,
@@ -23,6 +24,8 @@ const setupAnalyser = (audioContext) => {
 
 const audioContext = setupAudioContext();
 const analyser = setupAnalyser(audioContext);
+let frequencyBinDataArray = new Uint8Array(analyser.frequencyBinCount);
+let timeDomainDataArray = new Uint8Array(analyser.frequencyBinCount);
 
 const trailColors = [
   0x909090, // Mercury: Grayish color
@@ -213,7 +216,6 @@ const makeTrails = (planets) => {
 // Render functions
 
 const renderSun = (sun, sunMaterial, frequencyIntensity) => {
-
   const updateSunColor = (sunMaterial, frequencyIntensity) => {
     const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
     const signalScalingFactor = 0.001;
@@ -224,7 +226,7 @@ const renderSun = (sun, sunMaterial, frequencyIntensity) => {
   const updateSunEmissive = (sunMaterial, frequencyIntensity) => {
     sunMaterial.emissiveIntensity = frequencyIntensity;
   };
-  
+
   const scaleSun = (sun, frequencyIntensity) => {
     const computeSunScaleAtAxis = (axisScale, frequencyIntensity) => {
       const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
@@ -272,9 +274,7 @@ const renderTrails = (trails, planets, frequencyData) => {
     if (index % 2 === 0) {
       positions[0] = planet.position.x;
       positions[1] =
-        planet.position.y +
-        normalizedPlanetFrequencyIntensity +
-        displacement;
+        planet.position.y + normalizedPlanetFrequencyIntensity + displacement;
       positions[2] =
         planet.position.z +
         normalizedPlanetFrequencyIntensity * 15 +
@@ -286,9 +286,7 @@ const renderTrails = (trails, planets, frequencyData) => {
         normalizedPlanetFrequencyIntensity * 3 +
         displacement;
       positions[2] =
-        planet.position.z +
-        normalizedPlanetFrequencyIntensity +
-        displacement;
+        planet.position.z + normalizedPlanetFrequencyIntensity + displacement;
     }
 
     trail.geometry.attributes.position.needsUpdate = true;
@@ -394,6 +392,72 @@ const playTrack = (trackURL, audioContext) => {
     });
 };
 
+// -- Chart setup
+
+const makeTimeDomainLineChart = () => {
+  const ctx2 = document.getElementById("timeChart");
+  const timeDomainLineChart = new Chart(ctx2, {
+    type: "line",
+    data: {
+      labels: Array.from({ length: analyser.frequencyBinCount }, (_, i) => i),
+      datasets: [
+        {
+          label: "Audio Amplitude",
+          data: Array.from(timeDomainDataArray),
+          pointRadius: 0,
+          // Colors, border, etc. for your bars
+        },
+      ],
+    },
+    options: {
+      scale: {
+        y: {
+          beginAtZero: true,
+          min: 0,
+          max: 256,
+        }
+      }
+      // Your chart options go here
+    },
+  });
+  timeDomainLineChart.update('none');
+  return timeDomainLineChart;
+};
+
+const makeFrequencyDomainLineChart = () => {
+  const ctx = document.getElementById("frequencyChart");
+  const frequencyLineChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: Array.from({ length: analyser.frequencyBinCount }, (_, i) => i),
+      datasets: [
+        {
+          label: "Frequency Amplitude",
+          data: Array.from(frequencyBinDataArray),
+          pointRadius: 0,
+        },
+      ],
+    },
+    options: {
+      scale: {
+        y: {
+          beginAtZero: true,
+          min: 0,
+          max: 256,
+        }
+      }
+    },
+  });
+  frequencyLineChart.update('none');
+  return frequencyLineChart;
+};
+
+const frequencyLineChart = makeFrequencyDomainLineChart();
+const timeDomainLineChart = makeTimeDomainLineChart();
+
+
+// -- Setup scene
+
 const scene = new THREE.Scene();
 let [sun, sunMaterial] = makeSun();
 scene.add(sun);
@@ -414,9 +478,7 @@ trails.forEach((trail) => {
 });
 
 const startAudioVisualization = (trackURL, audioContext) => {
-
   const renderLoop = () => {
-
     const renderLoopContent = () => {
       const frequencyData = new Uint8Array(analyser.frequencyBinCount);
       analyser.getByteFrequencyData(frequencyData);
@@ -428,8 +490,14 @@ const startAudioVisualization = (trackURL, audioContext) => {
       renderStarField(starField);
       renderPlanets(planets, frequencyData, normalizedFrequencyIntensity);
       renderTrails(trails, planets, frequencyData);
+      analyser.getByteFrequencyData(frequencyBinDataArray);
+      analyser.getByteTimeDomainData(timeDomainDataArray);
+      frequencyLineChart.data.datasets[0].data = Array.from(frequencyBinDataArray)
+      timeDomainLineChart.data.datasets[0].data = Array.from(timeDomainDataArray)
+      frequencyLineChart.update();
+      timeDomainLineChart.update();
     };
-  
+
     requestAnimationFrame(renderLoop);
     renderLoopContent();
     composer.render();
@@ -439,4 +507,4 @@ const startAudioVisualization = (trackURL, audioContext) => {
   renderLoop();
 };
 
-startAudioVisualization("./theprodigy.mp3", audioContext);
+startAudioVisualization("./tameimpala.mov", audioContext);
