@@ -5,6 +5,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import Chart from "chart.js/auto";
 import TWEEN from '@tweenjs/tween.js';
+import { FirstPersonControls } from 'three/examples/jsm/controls/FirstPersonControls.js';
 
 const windowSize = {
   width: window.innerWidth,
@@ -485,6 +486,22 @@ trails.forEach((trail) => {
   scene.add(trail);
 });
 
+const camControls = new FirstPersonControls(camera);
+camControls.lookSpeed = 0.1;
+camControls.movementSpeed = 20;
+camControls.noFly = true;
+camControls.lookVertical = true;
+camControls.constrainVertical = false;
+camControls.verticalMin = 1.0;
+camControls.enabled = false;
+camControls.verticalMax = 2.0;
+camControls.lon = -150;
+camControls.lat = 120;
+
+
+let isLooking = false;
+var clock = new THREE.Clock();
+
 const startAudioVisualization = (trackURL, audioContext) => {
   const renderLoop = () => {
     const renderLoopContent = () => {
@@ -505,6 +522,9 @@ const startAudioVisualization = (trackURL, audioContext) => {
     renderLoopContent();
     composer.render();
     TWEEN.update();
+
+    const delta = clock.getDelta()
+    camControls.update(delta);
   };
 
   playTrack(trackURL, audioContext);
@@ -525,69 +545,6 @@ window.addEventListener('resize', () => {
   composer.renderer.setSize(windowSize.width, windowSize.height);
 });
 
-let amount = 0.05;
-const moveLeft = () => {
-  const startPosition = camera.position.clone();
-  const endPosition = startPosition.clone();
-  endPosition.x -= 1;
-  new TWEEN.Tween(startPosition)
-    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
-    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
-    .onUpdate(() => {
-      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-    }).start();
-};
-
-const moveRight = () => {
-  const startPosition = camera.position.clone();
-  const endPosition = startPosition.clone();
-  endPosition.x += 1;
-  new TWEEN.Tween(startPosition)
-    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
-    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
-    .onUpdate(() => {
-      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-    }).start();
-};
-
-const moveBackward = () => {
-  const startPosition = camera.position.clone();
-  const endPosition = startPosition.clone();
-  endPosition.z -= 1;
-  new TWEEN.Tween(startPosition)
-    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
-    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
-    .onUpdate(() => {
-      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-    }).start();
-};
-
-const moveForward = () => {
-  const startPosition = camera.position.clone();
-  const endPosition = startPosition.clone();
-  endPosition.z += 1;
-  new TWEEN.Tween(startPosition)
-    .to(endPosition, 100) // Duration: 2000ms or 2 seconds
-    .easing(TWEEN.Easing.Quadratic.Out) // Use any easing type provided by the library
-    .onUpdate(() => {
-      camera.position.set(startPosition.x, startPosition.y, startPosition.z);
-    }).start();
-};
-
-document.addEventListener('keydown', (event) => {
-    switch (event.keyCode) {
-      case 37: // Left arrow key
-          moveLeft()
-          break;
-      case 39: // Right arrow key
-          moveRight();
-          break;
-      case 38: // Up arrow key
-          moveBackward()
-          break;
-      case 40: // Down arrow key
-          moveForward();
-          break;
-  }
-});
-
+document.addEventListener('click', () => {
+  camControls.enabled = !camControls.enabled;
+});ss
