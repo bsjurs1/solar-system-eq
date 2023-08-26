@@ -452,6 +452,13 @@ const makeFrequencyDomainLineChart = () => {
   return frequencyLineChart;
 };
 
+const updateCharts = () => {
+  frequencyLineChart.data.datasets[0].data = Array.from(frequencyBinDataArray)
+  timeDomainLineChart.data.datasets[0].data = Array.from(timeDomainDataArray)
+  frequencyLineChart.update();
+  timeDomainLineChart.update();
+};
+
 const frequencyLineChart = makeFrequencyDomainLineChart();
 const timeDomainLineChart = makeTimeDomainLineChart();
 
@@ -480,22 +487,17 @@ trails.forEach((trail) => {
 const startAudioVisualization = (trackURL, audioContext) => {
   const renderLoop = () => {
     const renderLoopContent = () => {
-      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(frequencyData);
-      const normalizedFrequencyIntensity = frequencyData[5] / 256;
+      analyser.getByteFrequencyData(frequencyBinDataArray);
+      analyser.getByteTimeDomainData(timeDomainDataArray);
+      const normalizedFrequencyIntensity = frequencyBinDataArray[5] / 256;
       renderSun(sun, sunMaterial, normalizedFrequencyIntensity);
       onBeat(() => {
         console.log("Beat!");
       });
       renderStarField(starField);
-      renderPlanets(planets, frequencyData, normalizedFrequencyIntensity);
-      renderTrails(trails, planets, frequencyData);
-      analyser.getByteFrequencyData(frequencyBinDataArray);
-      analyser.getByteTimeDomainData(timeDomainDataArray);
-      frequencyLineChart.data.datasets[0].data = Array.from(frequencyBinDataArray)
-      timeDomainLineChart.data.datasets[0].data = Array.from(timeDomainDataArray)
-      frequencyLineChart.update();
-      timeDomainLineChart.update();
+      renderPlanets(planets, frequencyBinDataArray, normalizedFrequencyIntensity);
+      renderTrails(trails, planets, frequencyBinDataArray);
+      updateCharts();
     };
 
     requestAnimationFrame(renderLoop);
