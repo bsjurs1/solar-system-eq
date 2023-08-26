@@ -242,6 +242,118 @@ const renderStarField = (starField) => {
   starField.geometry.attributes.position.needsUpdate = true;
 };
 
+const renderTrails = (trails, planets, frequencyData) => {
+  trails.forEach((trail, index) => {
+    const normalizedPlanetFrequencyIntensity = frequencyData[index * 200] / 256;
+    const planet = planets[index];
+    const speed = orbitSpeeds[index] * 0.3;
+    const positions = trail.geometry.attributes.position.array;
+
+    const forwardDirection = new THREE.Vector3(
+      -Math.sin(Date.now() * speed),
+      0,
+      -Math.cos(Date.now() * speed)
+    );
+
+    const sideDirection = new THREE.Vector3().crossVectors(
+      forwardDirection,
+      new THREE.Vector3(0, 1, 0)
+    );
+
+    // Shift positions and apply audio data for displacement
+    for (let i = positions.length - 3; i > 0; i -= 3) {
+      positions[i] = positions[i - 3];
+      positions[i + 1] = positions[i - 2];
+      positions[i + 2] = positions[i - 1];
+    }
+
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    // Displace the starting point of the trail based on the audio data
+    const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
+
+    if (index % 2 === 0) {
+      positions[0] = planet.position.x + sideDirection.x;
+      positions[1] =
+        planet.position.y +
+        sideDirection.y +
+        normalizedPlanetFrequencyIntensity +
+        displacement;
+      positions[2] =
+        planet.position.z +
+        sideDirection.z +
+        normalizedPlanetFrequencyIntensity * 15 +
+        displacement;
+    } else {
+      positions[0] = planet.position.x + sideDirection.x;
+      positions[1] =
+        planet.position.y +
+        sideDirection.y +
+        normalizedPlanetFrequencyIntensity * 3 +
+        displacement;
+      positions[2] =
+        planet.position.z +
+        sideDirection.z +
+        normalizedPlanetFrequencyIntensity +
+        displacement;
+    }
+
+    trail.geometry.attributes.position.needsUpdate = true;
+  });
+};
+
+const renderPlanets = (planets, frequencyData) => {
+  const translatePlanet = (planet, index) => {
+    const orbitRadius = planetDistances[index];
+    const speed = orbitSpeeds[index] * 0.3;
+    planet.position.x = Math.sin(Date.now() * speed) * orbitRadius;
+    planet.position.z = Math.cos(Date.now() * speed) * orbitRadius;
+  };
+
+  const rotatePlanet = (planet) => {
+    const planetRotationFactor = 0.005;
+    planet.rotation.y += planetRotationFactor;
+  };
+
+  const recomputeOrbitSpeed = (index, planetFrequencyIntensity) => {
+    orbitSpeeds[index] += (planetFrequencyIntensity - 0.7) / 200000000000000.0;
+  };
+
+  const scalePlanet = (planet, planetFrequencyIntensity, index) => {
+    const computePlanetScaleAtAxis = (axisScale, frequencyIntensity) => {
+      const origoCenteredFrequencyIntensity = frequencyIntensity - 0.5;
+      const signalScalingFactor = 0.0001;
+      const recomputedAxisScale =
+        axisScale +
+        origoCenteredFrequencyIntensity * index ** 2 * signalScalingFactor;
+      const MIN_PLANET_SCALE = 0.1;
+      const MAX_PLANET_SCALE = 1 + index ** 3 / 10.0;
+      const minValue = Math.min(MAX_PLANET_SCALE, recomputedAxisScale);
+      return Math.max(MIN_PLANET_SCALE, minValue);
+    };
+
+    planet.scale.x = computePlanetScaleAtAxis(
+      planet.scale.x,
+      planetFrequencyIntensity
+    );
+    planet.scale.y = computePlanetScaleAtAxis(
+      planet.scale.y,
+      planetFrequencyIntensity
+    );
+    planet.scale.z = computePlanetScaleAtAxis(
+      planet.scale.z,
+      planetFrequencyIntensity
+    );
+  };
+
+  planets.forEach((planet, index) => {
+    rotatePlanet(planet);
+    translatePlanet(planet, index);
+    const normalizedPlanetFrequencyIntensity = frequencyData[index * 200] / 256;
+    recomputeOrbitSpeed(index, normalizedPlanetFrequencyIntensity);
+    scalePlanet(planet, normalizedPlanetFrequencyIntensity, index);
+  });
+};
+
 let lastVolume = 0;
 const BEAT_THRESHOLD = 20; // Adjust this value based on your specific track and desired sensitivity
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
@@ -307,137 +419,30 @@ trails.forEach((trail) => {
   scene.add(trail);
 });
 
-const renderPlanets = (planets, frequencyData, frequencyIntensity) => {
-  planets.forEach((planet, index) => {
-    planet.rotation.y += 0.005; // Planet self-rotation
-
-    const orbitRadius = planetDistances[index];
-    const speed = orbitSpeeds[index] * 0.3;
-
-    planet.position.x = Math.sin(Date.now() * speed) * orbitRadius;
-    planet.position.z = Math.cos(Date.now() * speed) * orbitRadius;
-    const planetFrequencyIntensity = frequencyData[index * 200] / 256;
-    //planet.position.y += (planetFrequencyIntensity) * 0.1;
-    orbitSpeeds[index] += (frequencyIntensity - 0.7) / 200000000000000.0;
-
-    const trail = trails[index];
-    const positions = trail.geometry.attributes.position.array;
-
-    const forwardDirection = new THREE.Vector3(
-      -Math.sin(Date.now() * speed),
-      0,
-      -Math.cos(Date.now() * speed)
-    );
-
-    const sideDirection = new THREE.Vector3().crossVectors(
-      forwardDirection,
-      new THREE.Vector3(0, 1, 0)
-    );
-
-    // Shift positions and apply audio data for displacement
-    for (let i = positions.length - 3; i > 0; i -= 3) {
-      positions[i] = positions[i - 3];
-      positions[i + 1] = positions[i - 2];
-      positions[i + 2] = positions[i - 1];
-    }
-
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    // Displace the starting point of the trail based on the audio data
-    const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
-
-    planet.scale.x = Math.max(
-      0.1,
-      Math.min(
-        1 + index ** 3 / 10.0,
-        planet.scale.x + ((frequencyIntensity - 0.7) * index ** 2) / 1000.0
-      )
-    );
-    planet.scale.y = Math.max(
-      0.1,
-      Math.min(
-        1 + index ** 3 / 10.0,
-        planet.scale.y + ((frequencyIntensity - 0.7) * index ** 2) / 1000.0
-      )
-    );
-    planet.scale.z = Math.max(
-      0.1,
-      Math.min(
-        1 + index ** 3 / 10.0,
-        planet.scale.z + ((frequencyIntensity - 0.7) * index ** 2) / 1000.0
-      )
-    );
-
-    if (index % 2 === 0) {
-      positions[0] = planet.position.x + sideDirection.x;
-      positions[1] =
-        planet.position.y +
-        sideDirection.y +
-        planetFrequencyIntensity +
-        displacement;
-      positions[2] =
-        planet.position.z +
-        sideDirection.z +
-        planetFrequencyIntensity * 15 +
-        displacement;
-    } else {
-      positions[0] = planet.position.x + sideDirection.x;
-      positions[1] =
-        planet.position.y +
-        sideDirection.y +
-        planetFrequencyIntensity * 3 +
-        displacement;
-      positions[2] =
-        planet.position.z +
-        sideDirection.z +
-        planetFrequencyIntensity +
-        displacement;
-    }
-
-    trail.geometry.attributes.position.needsUpdate = true;
-  });
-};
-
-const renderLoopContent = () => {
-  const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(frequencyData);
-  const normalizedFrequencyIntensity = frequencyData[5] / 256;
-  renderSun(sun, sunMaterial, normalizedFrequencyIntensity);
-  onBeat(() => {
-    console.log("Beat!");
-  });
-  renderStarField(starField);
-  renderPlanets(planets, frequencyData, normalizedFrequencyIntensity);
-};
-
-const renderLoop = () => {
-  requestAnimationFrame(renderLoop);
-  renderLoopContent();
-  composer.render();
-}
-
 const startAudioVisualization = (trackURL, audioContext) => {
+
+  const renderLoop = () => {
+
+    const renderLoopContent = () => {
+      const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(frequencyData);
+      const normalizedFrequencyIntensity = frequencyData[5] / 256;
+      renderSun(sun, sunMaterial, normalizedFrequencyIntensity);
+      onBeat(() => {
+        console.log("Beat!");
+      });
+      renderStarField(starField);
+      renderPlanets(planets, frequencyData, normalizedFrequencyIntensity);
+      renderTrails(trails, planets, frequencyData);
+    };
+  
+    requestAnimationFrame(renderLoop);
+    renderLoopContent();
+    composer.render();
+  };
+
   playTrack(trackURL, audioContext);
   renderLoop();
 };
 
 startAudioVisualization("./theprodigy.mp3", audioContext);
-
-document.addEventListener("keydown", moveCamera);
-
-function moveCamera(event) {
-  console.log("move camera");
-  switch (event.keyCode) {
-    case 37: // left arrow
-      camera.translateX(-1);
-      break;
-    case 38: // up arrow
-      camera.translateZ(1);
-      break;
-    case 39: // right arrow
-      camera.translateX(1);
-      break;
-    case 40: // down arrow
-      camera.translateZ(-1);
-      break;
-  }
-}
