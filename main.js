@@ -248,21 +248,31 @@ const renderSun = (sun, sunMaterial, frequencyIntensity) => {
     sunMaterial.emissiveIntensity = frequencyIntensity;
   };
 
+  let oldSunRadius = 10.0;
+  let newSunRadius = 10.0;
+  
   const scaleSun = (sun, frequencyIntensity) => {
-    const computeSunScaleAtAxis = (axisScale, frequencyIntensity) => {
+    const computeSunScaleAtAxis = (radius, frequencyIntensity) => {
       const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
-      const signalScalingFactor = 0.001;
-      const recomputedAxisScale =
-        axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
-      const MAX_SUN_SCALE = 10.5;
-      const MIN_SUN_SCALE = 0.3;
-      const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
-      return Math.max(MIN_SUN_SCALE, minValue);
+      const signalScalingFactor = 0.1;
+      const recomputedRadius = radius + origoCenteredFrequencyIntensity * signalScalingFactor;
+      const MAX_SUN_RADIUS = 25.0;
+      const MIN_SUN_RADIUS = 5.0;
+  
+      if (recomputedRadius > MAX_SUN_RADIUS) {
+        newSunRadius = MAX_SUN_RADIUS;
+      } else if (recomputedRadius < MIN_SUN_RADIUS) {
+        newSunRadius = MIN_SUN_RADIUS;
+      } else {
+        newSunRadius = recomputedRadius;
+      }
+  
+      return newSunRadius / oldSunRadius;
     };
-
-    sun.scale.x = computeSunScaleAtAxis(sun.scale.x, frequencyIntensity);
-    sun.scale.y = computeSunScaleAtAxis(sun.scale.y, frequencyIntensity);
-    sun.scale.z = computeSunScaleAtAxis(sun.scale.z, frequencyIntensity);
+    
+    const scalingFactor = computeSunScaleAtAxis(oldSunRadius, frequencyIntensity);
+    oldSunRadius = newSunRadius; // Update the oldSunRadius for next call
+    sun.scale.set(scalingFactor, scalingFactor, scalingFactor);
   };
 
   updateSunColor(sunMaterial, frequencyIntensity);
