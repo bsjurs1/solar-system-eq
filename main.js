@@ -9,6 +9,20 @@ const windowSize = {
   height: window.innerHeight,
 };
 
+const setupAudioContext = () => {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  audioContext.destination;
+  return audioContext;
+};
+
+const setupAnalyser = (audioContext) => {
+  const analyser = audioContext.createAnalyser();
+  return analyser;
+};
+
+const audioContext = setupAudioContext();
+const analyser = setupAnalyser(audioContext);
+
 const trailColors = [
   0x909090, // Mercury: Grayish color
   0xdaa520, // Venus: Golden color
@@ -228,12 +242,10 @@ const renderStarField = (starField) => {
   starField.geometry.attributes.position.needsUpdate = true;
 };
 
-let audioContext, analyser, source;
 let lastVolume = 0;
 const BEAT_THRESHOLD = 20; // Adjust this value based on your specific track and desired sensitivity
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
 let lastBeatTime = 0;
-
 const onBeat = (callback) => {
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Uint8Array(bufferLength);
@@ -258,6 +270,22 @@ const onBeat = (callback) => {
   }
 
   lastVolume = volume;
+};
+
+const playTrack = (trackURL, audioContext) => {
+  fetch(trackURL)
+    .then((response) => response.arrayBuffer())
+    .then((data) => audioContext.decodeAudioData(data))
+    .then((audioBuffer) => {
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioContext.destination);
+      source.connect(analyser);
+      source.start();
+    })
+    .catch((e) => {
+      console.error("There was an error playing the audio:", e);
+    });
 };
 
 const scene = new THREE.Scene();
@@ -369,52 +397,32 @@ const renderPlanets = (planets, frequencyData, frequencyIntensity) => {
   });
 };
 
-const renderLoop = () => {
-  requestAnimationFrame(renderLoop);
-
+const renderLoopContent = () => {
   const frequencyData = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(frequencyData);
-  const frequencyIntensity = frequencyData[5] / 256; // Normalize to 0-1 range
-
-  renderSun(sun, sunMaterial, frequencyIntensity);
+  const normalizedFrequencyIntensity = frequencyData[5] / 256;
+  renderSun(sun, sunMaterial, normalizedFrequencyIntensity);
   onBeat(() => {
     console.log("Beat!");
   });
   renderStarField(starField);
-  renderPlanets(planets, frequencyData, frequencyIntensity);
+  renderPlanets(planets, frequencyData, normalizedFrequencyIntensity);
+};
 
+const renderLoop = () => {
+  requestAnimationFrame(renderLoop);
+  renderLoopContent();
   composer.render();
 }
 
-if (!audioContext) {
-  audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  audioContext.destination;
-  analyser = audioContext.createAnalyser();
-}
+const startAudioVisualization = (trackURL, audioContext) => {
+  playTrack(trackURL, audioContext);
+  renderLoop();
+};
 
-fetch("./theprodigy.mp3")
-  .then((response) => response.arrayBuffer())
-  .then((data) => audioContext.decodeAudioData(data))
-  .then((audioBuffer) => {
-    source = audioContext.createBufferSource();
-    source.buffer = audioBuffer;
-
-    // Connect the audio source node to the audio context's output
-    source.connect(audioContext.destination);
-    source.connect(analyser);
-    // Start playing the audio
-    source.start();
-  })
-  .catch((e) => {
-    console.error("There was an error playing the audio:", e);
-  });
-
-// Call the animate function to start the loop
-renderLoop();
+startAudioVisualization("./theprodigy.mp3", audioContext);
 
 document.addEventListener("keydown", moveCamera);
-
-const speed = 1000.0;
 
 function moveCamera(event) {
   console.log("move camera");
