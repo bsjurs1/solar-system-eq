@@ -277,12 +277,6 @@ const renderStarField = (starField) => {
 
 let normalizedFrequencySubtractors = [0.6, 0.6, 0.5, 0.5, 0.4, 0.4, 0.1225, 0.11];
 
-const getStandardDeviation = (array) => {
-  const n = array.length
-  const mean = array.reduce((a, b) => a + b) / n
-  return Math.sqrt(array.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n)
-}
-
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
     const planet = planets[index];
