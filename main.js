@@ -66,8 +66,8 @@ const makeCamera = () => {
     0.1,
     2000
   );
-  camera.position.z = 200;
-  camera.position.y = 100;
+  camera.position.z = 150;
+  camera.position.y = 50;
   camera.lookAt(sun.position);
   return camera;
 };
@@ -164,7 +164,7 @@ const makePlanets = () => {
   return planets;
 };
 
-let trailsPointSizes = [10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0, 10.0];
+let trailsPointSizes = [3.0, 3.0, 4.0, 3.0, 5.0, 4.0, 3.0, 3.0];
 const trailLengths = [200, 200, 200, 200, 300, 400, 500, 700];
 
 const makeTrails = (planets) => {
@@ -287,7 +287,8 @@ const renderStarField = (starField) => {
 };
 
 let normalizedFrequencySubtractors = [0.6, 0.6, 0.5, 0.5, 0.4, 0.4, 0.1225, 0.11];
-const trailPointDisplacementFactors = [20,30,40,40,50,100,70,60];
+const trailPointDisplacementFactors = [20,30,40,40,50,50,40,30].map(a => a*0.3);
+const frequencyIndeces = [50,100,150,200,250,300,350,400];
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
@@ -301,7 +302,7 @@ const renderTrails = (trails, planets, frequencyData) => {
       positions[i + 2] = positions[i - 1];
     }
 
-    const normalizedFrequency = frequencyData[(index+2)*50] / 256 - normalizedFrequencySubtractors[index];
+    const normalizedFrequency = frequencyData[frequencyIndeces[index]] / 256 - normalizedFrequencySubtractors[index];
     const displacement = normalizedFrequency * trailPointDisplacementFactors[index];
     trailsPointSizes[index] = (normalizedFrequency*2);
     positions[0] = planet.position.x;
