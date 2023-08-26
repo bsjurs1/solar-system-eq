@@ -510,3 +510,14 @@ const startAudioVisualization = (trackURL, audioContext) => {
 };
 
 startAudioVisualization("./tameimpala.mov", audioContext);
+
+window.addEventListener('resize', () => {
+  console.log("resize");
+  windowSize.width = window.innerWidth;
+  windowSize.height = window.innerHeight;
+  
+  camera.aspect = windowSize.width / windowSize.height;
+  camera.updateProjectionMatrix();
+  
+  composer.renderer.setSize(windowSize.width, windowSize.height);
+});
