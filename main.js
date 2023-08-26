@@ -17,6 +17,7 @@ const setupAudioContext = () => {
 
 const setupAnalyser = (audioContext) => {
   const analyser = audioContext.createAnalyser();
+  analyser.fftSize = 2048;
   return analyser;
 };
 
@@ -253,9 +254,8 @@ const renderStarField = (starField) => {
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
-    const normalizedPlanetFrequencyIntensity = frequencyData[index * 10] / 256;
+    const normalizedPlanetFrequencyIntensity = frequencyData[index] / 256;
     const planet = planets[index];
-    const speed = orbitSpeeds[index] * 0.3;
     const positions = trail.geometry.attributes.position.array;
 
     // Shift positions and apply audio data for displacement
