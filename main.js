@@ -34,7 +34,7 @@ const trailColors = [
   0x4682b4, // Neptune: Steel blue color
 ];
 
-const planetDistances = [5.0, 15.0, 25.0, 30.0, 92, 295.8, 400, 1300.5]; // in our scaled units
+const planetDistances = [5.0, 15.0, 25.0, 30.0, 40, 50, 60, 70]; // in our scaled units
 
 const orbitSpeeds = [
   0.002, 0.0018, 0.0015, 0.0012, 0.0007, 0.0005, 0.0003, 0.0002,
@@ -55,7 +55,7 @@ const makeCamera = () => {
     45,
     windowSize.width / windowSize.height,
     0.1,
-    10000
+    1000
   );
   camera.position.z = 80;
   camera.position.y = 20;
@@ -83,7 +83,7 @@ const makeComposer = (scene, camera, windowSize) => {
   return composer;
 };
 
-// -- Scene object setup
+// -- Scene generic setup
 
 const makeSun = () => {
   const texture = new THREE.TextureLoader().load("./2k_sun.jpg");
@@ -253,21 +253,10 @@ const renderStarField = (starField) => {
 
 const renderTrails = (trails, planets, frequencyData) => {
   trails.forEach((trail, index) => {
-    const normalizedPlanetFrequencyIntensity = frequencyData[index * 200] / 256;
+    const normalizedPlanetFrequencyIntensity = frequencyData[index * 10] / 256;
     const planet = planets[index];
     const speed = orbitSpeeds[index] * 0.3;
     const positions = trail.geometry.attributes.position.array;
-
-    const forwardDirection = new THREE.Vector3(
-      -Math.sin(Date.now() * speed),
-      0,
-      -Math.cos(Date.now() * speed)
-    );
-
-    const sideDirection = new THREE.Vector3().crossVectors(
-      forwardDirection,
-      new THREE.Vector3(0, 1, 0)
-    );
 
     // Shift positions and apply audio data for displacement
     for (let i = positions.length - 3; i > 0; i -= 3) {
@@ -281,27 +270,23 @@ const renderTrails = (trails, planets, frequencyData) => {
     const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
 
     if (index % 2 === 0) {
-      positions[0] = planet.position.x + sideDirection.x;
+      positions[0] = planet.position.x;
       positions[1] =
         planet.position.y +
-        sideDirection.y +
         normalizedPlanetFrequencyIntensity +
         displacement;
       positions[2] =
         planet.position.z +
-        sideDirection.z +
         normalizedPlanetFrequencyIntensity * 15 +
         displacement;
     } else {
-      positions[0] = planet.position.x + sideDirection.x;
+      positions[0] = planet.position.x;
       positions[1] =
         planet.position.y +
-        sideDirection.y +
         normalizedPlanetFrequencyIntensity * 3 +
         displacement;
       positions[2] =
         planet.position.z +
-        sideDirection.z +
         normalizedPlanetFrequencyIntensity +
         displacement;
     }
