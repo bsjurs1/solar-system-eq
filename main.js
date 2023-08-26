@@ -3,7 +3,6 @@ import "./styles.css";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import * as gsap from "gsap";
 
 const windowSize = {
   width: window.innerWidth,
@@ -190,7 +189,46 @@ const makeTrails = (planets) => {
   return trails;
 };
 
-let audioContext, analyser, source, data;
+const updateSunEmissive = (sunMaterial, frequencyIntensity) => {
+  sunMaterial.emissiveIntensity = frequencyIntensity;
+};
+
+const computeSunScaleAtAxis = (axisScale, frequencyIntensity) => {
+  const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
+  const signalScalingFactor = 0.001;
+  const recomputedAxisScale =
+    axisScale + origoCenteredFrequencyIntensity * signalScalingFactor;
+  const MAX_SUN_SCALE = 2;
+  const MIN_SUN_SCALE = 0.3;
+  const minValue = Math.min(MAX_SUN_SCALE, recomputedAxisScale);
+  return Math.max(MIN_SUN_SCALE, minValue);
+};
+
+const scaleSun = (sun, frequencyIntensity) => {
+  sun.scale.x = computeSunScaleAtAxis(sun.scale.x, frequencyIntensity);
+  sun.scale.y = computeSunScaleAtAxis(sun.scale.y, frequencyIntensity);
+  sun.scale.z = computeSunScaleAtAxis(sun.scale.z, frequencyIntensity);
+};
+
+const updateSunColor = (sunMaterial, frequencyIntensity) => {
+  const origoCenteredFrequencyIntensity = frequencyIntensity - 0.7;
+  const signalScalingFactor = 0.001;
+  sunMaterial.emissive.r +=
+    origoCenteredFrequencyIntensity * signalScalingFactor;
+};
+
+const renderSun = (sun, sunMaterial, frequencyIntensity) => {
+  updateSunColor(sunMaterial, frequencyIntensity);
+  updateSunEmissive(sunMaterial, frequencyIntensity);
+  scaleSun(sun, frequencyIntensity);
+};
+
+const renderStarField = (starField) => {
+  starField.rotation.y += 0.0001;
+  starField.geometry.attributes.position.needsUpdate = true;
+};
+
+let audioContext, analyser, source;
 let lastVolume = 0;
 const BEAT_THRESHOLD = 20; // Adjust this value based on your specific track and desired sensitivity
 const MIN_TIME_BETWEEN_BEATS = 0.15; // seconds, to avoid multiple detections for one beat
@@ -241,42 +279,7 @@ trails.forEach((trail) => {
   scene.add(trail);
 });
 
-
-function animate() {
-  requestAnimationFrame(animate);
-
-  data = new Uint8Array(analyser.frequencyBinCount);
-  const timeData = analyser.getByteTimeDomainData(data);
-  const frequencyData = new Uint8Array(analyser.frequencyBinCount);
-  analyser.getByteFrequencyData(frequencyData);
-
-  const frequencyIntensity = frequencyData[5] / 256; // Normalize to 0-1 range
-  sunMaterial.emissiveIntensity = frequencyIntensity;
-  sun.scale.x = Math.max(
-    0.3,
-    Math.min(2, sun.scale.x + (frequencyIntensity - 0.7) * 0.001)
-  );
-  sun.scale.y = Math.max(
-    0.3,
-    Math.min(2, sun.scale.y + (frequencyIntensity - 0.7) * 0.001)
-  );
-  sun.scale.z = Math.max(
-    0.3,
-    Math.min(2, sun.scale.z + (frequencyIntensity - 0.7) * 0.001)
-  );
-
-  onBeat(() => {
-    console.log("Beat!");
-  });
-
-  sunMaterial.emissive.r += (frequencyIntensity - 0.7) * 0.001;
-
-  starField.geometry.attributes.position.needsUpdate = true; // Inform three.js that the positions have been updated
-  sun.rotation.y += 0.005;
-
-  starField.rotation.y += 0.0001;
-
-  // Rotate the planets
+const renderPlanets = (planets, frequencyData, frequencyIntensity) => {
   planets.forEach((planet, index) => {
     planet.rotation.y += 0.005; // Planet self-rotation
 
@@ -310,6 +313,7 @@ function animate() {
       positions[i + 2] = positions[i - 1];
     }
 
+    const data = new Uint8Array(analyser.frequencyBinCount);
     // Displace the starting point of the trail based on the audio data
     const displacement = (data[index % data.length] - 128) * 0.01; // The factor of 0.01 is arbitrary; adjust for more/less displacement
 
@@ -363,6 +367,21 @@ function animate() {
 
     trail.geometry.attributes.position.needsUpdate = true;
   });
+};
+
+const renderLoop = () => {
+  requestAnimationFrame(renderLoop);
+
+  const frequencyData = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(frequencyData);
+  const frequencyIntensity = frequencyData[5] / 256; // Normalize to 0-1 range
+
+  renderSun(sun, sunMaterial, frequencyIntensity);
+  onBeat(() => {
+    console.log("Beat!");
+  });
+  renderStarField(starField);
+  renderPlanets(planets, frequencyData, frequencyIntensity);
 
   composer.render();
 }
@@ -373,7 +392,7 @@ if (!audioContext) {
   analyser = audioContext.createAnalyser();
 }
 
-fetch("./tameimpala.mov")
+fetch("./theprodigy.mp3")
   .then((response) => response.arrayBuffer())
   .then((data) => audioContext.decodeAudioData(data))
   .then((audioBuffer) => {
@@ -391,7 +410,7 @@ fetch("./tameimpala.mov")
   });
 
 // Call the animate function to start the loop
-animate();
+renderLoop();
 
 document.addEventListener("keydown", moveCamera);
 
